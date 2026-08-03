@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Capsule地图工具：地址地理编码、坐标系转换、地图交互与区域热力图。">
+    <title>Capsule地图工具</title>
+    <link rel="stylesheet" href="css/style.css?v=20260803-3">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="img/logo.png" alt="Capsule地图工具" class="logo">
+                <div class="title-container">
+                    <h1>Capsule地图工具</h1>
+                    <p>地址转经纬度 | 坐标系转换 | 地图交互 | 区域热力图</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-tabs">
+            <button class="main-tab-btn active" data-main-tab="geocode">地址转经纬度</button>
+            <button class="main-tab-btn" data-main-tab="coordinate">坐标系转换</button>
+            <button class="main-tab-btn" data-main-tab="map">地图交互</button>
+            <button class="main-tab-btn" data-main-tab="region">区域热力图</button>
+        </div>
+
+        <div class="main-tab-content">
+            <!-- 地址转经纬度功能 -->
+            <div class="main-tab-pane active" id="geocode-tab">
+                <div class="input-section api-key-settings">
+                    <h3>API Key 设置</h3>
+                    <p class="help-text">密钥仅保存在当前浏览器本地存储中；调用时临时发送到当前服务端，服务端不保存。未填写时使用服务端环境变量配置。</p>
+                    <div class="form-group">
+                        <label for="google-api-key">Google Maps API Key:</label>
+                        <input type="password" id="google-api-key" placeholder="输入你的 Google API Key" autocomplete="off" />
+                    </div>
+                    <div class="form-group">
+                        <label for="amap-api-key">高德地图 API Key:</label>
+                        <input type="password" id="amap-api-key" placeholder="输入你的高德 Web 服务 Key" autocomplete="off" />
+                    </div>
+                    <button type="button" id="clear-api-keys" class="btn secondary-btn">清除本地 Key</button>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="single">单个地址转换</button>
+                    <button class="tab-btn" data-tab="batch">批量地址转换</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- 单个地址转换 -->
+                    <div class="tab-pane active" id="single-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="geocode-provider">地理编码服务商:</label>
+                                <select id="geocode-provider" class="select-input">
+                                    <option value="google" selected>Google Maps</option>
+                                    <option value="amap">高德地图</option>
+                                </select>
+                                <div id="geocode-provider-notice" class="provider-notice info-notice">Google Maps 返回 WGS84 坐标，本页面会显示地图。</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">输入地址:</label>
+                                <input type="text" id="address" placeholder="例如: 北京市海淀区中关村" />
+                            </div>
+                            <button id="geocode-btn" class="btn primary-btn">转换</button>
+                        </div>
+
+                        <div class="result-section" id="single-result">
+                            <div class="result-card hidden" id="result-card">
+                                <h3>转换结果</h3>
+                                <div class="result-details">
+                                    <div class="result-item">
+                                        <span class="label">原始地址:</span>
+                                        <span id="original-address"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">格式化地址:</span>
+                                        <span id="formatted-address"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">纬度:</span>
+                                        <span id="latitude"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">经度:</span>
+                                        <span id="longitude"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">坐标系:</span>
+                                        <span id="coordinate-system"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="map-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- 批量地址转换 -->
+                    <div class="tab-pane" id="batch-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="batch-geocode-provider">地理编码服务商:</label>
+                                <select id="batch-geocode-provider" class="select-input">
+                                    <option value="google" selected>Google Maps</option>
+                                    <option value="amap">高德地图</option>
+                                </select>
+                                <div id="batch-geocode-provider-notice" class="provider-notice info-notice">Google Maps 返回 WGS84 坐标，本批量结果会提供地图显示。</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="file-upload">上传Excel或CSV文件:</label>
+                                <input type="file" id="file-upload" accept=".xlsx,.xls,.csv" />
+                                <p class="help-text">文件第一列应包含地址信息</p>
+                            </div>
+                            <button id="batch-geocode-btn" class="btn primary-btn">批量转换</button>
+                        </div>
+
+                        <div class="result-section">
+                            <div class="progress-container hidden" id="progress-container">
+                                <div class="progress-bar" id="progress-bar"></div>
+                                <div class="progress-text" id="progress-text">处理中...</div>
+                            </div>
+                            
+                            <div class="batch-results hidden" id="batch-results">
+                                <h3>批量转换结果</h3>
+                                <div class="actions">
+                                    <button id="download-csv" class="btn secondary-btn">下载CSV</button>
+                                    <button id="show-map-btn" class="btn secondary-btn">显示地图</button>
+                                </div>
+                                <div class="table-container">
+                                    <table id="results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>原始地址</th>
+                                                <th>格式化地址</th>
+                                                <th>纬度</th>
+                                                <th>经度</th>
+                                                <th>坐标系</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="results-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="batch-map-container" class="hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 坐标系转换功能 -->
+            <div class="main-tab-pane" id="coordinate-tab">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="single-coord">单个坐标转换</button>
+                    <button class="tab-btn" data-tab="batch-coord">批量坐标转换</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- 单个坐标转换 -->
+                    <div class="tab-pane active" id="single-coord-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="source-coord-system">源坐标系:</label>
+                                <select id="source-coord-system" class="select-input">
+                                    <option value="WGS84">WGS84 (GPS坐标)</option>
+                                    <option value="GCJ02">GCJ02 (高德、腾讯坐标)</option>
+                                    <option value="BD09">BD09 (百度坐标)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="target-coord-system">目标坐标系:</label>
+                                <select id="target-coord-system" class="select-input">
+                                    <option value="WGS84">WGS84 (GPS坐标)</option>
+                                    <option value="GCJ02" selected>GCJ02 (高德、腾讯坐标)</option>
+                                    <option value="BD09">BD09 (百度坐标)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="longitude">经度:</label>
+                                <input type="text" id="longitude-input" placeholder="例如: 116.404" />
+                            </div>
+                            <div class="form-group">
+                                <label for="latitude">纬度:</label>
+                                <input type="text" id="latitude-input" placeholder="例如: 39.915" />
+                            </div>
+                            <button id="convert-coord-btn" class="btn primary-btn">转换</button>
+                        </div>
+
+                        <div class="result-section">
+                            <div class="result-card hidden" id="coord-result-card">
+                                <h3>转换结果</h3>
+                                <div class="result-details">
+                                    <div class="result-item">
+                                        <span class="label">源坐标系:</span>
+                                        <span id="source-system"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">目标坐标系:</span>
+                                        <span id="target-system"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">源经度:</span>
+                                        <span id="source-longitude"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">源纬度:</span>
+                                        <span id="source-latitude"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">转换后经度:</span>
+                                        <span id="target-longitude"></span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label">转换后纬度:</span>
+                                        <span id="target-latitude"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 批量坐标转换 -->
+                    <div class="tab-pane" id="batch-coord-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="batch-source-coord-system">源坐标系:</label>
+                                <select id="batch-source-coord-system" class="select-input">
+                                    <option value="WGS84">WGS84 (GPS坐标)</option>
+                                    <option value="GCJ02">GCJ02 (高德、腾讯坐标)</option>
+                                    <option value="BD09">BD09 (百度坐标)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="batch-target-coord-system">目标坐标系:</label>
+                                <select id="batch-target-coord-system" class="select-input">
+                                    <option value="WGS84">WGS84 (GPS坐标)</option>
+                                    <option value="GCJ02" selected>GCJ02 (高德、腾讯坐标)</option>
+                                    <option value="BD09">BD09 (百度坐标)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="coord-file-upload">上传Excel或CSV文件:</label>
+                                <input type="file" id="coord-file-upload" accept=".xlsx,.xls,.csv" />
+                                <p class="help-text">文件前两列应分别包含经度和纬度信息</p>
+                                <p class="help-text">程序依次从数据表第二行开始检索处理</p>
+                            </div>
+                            <button id="batch-convert-coord-btn" class="btn primary-btn">批量转换</button>
+                        </div>
+
+                        <div class="result-section">
+                            <div class="progress-container hidden" id="coord-progress-container">
+                                <div class="progress-bar" id="coord-progress-bar"></div>
+                                <div class="progress-text" id="coord-progress-text">处理中...</div>
+                            </div>
+                            
+                            <div class="batch-results hidden" id="batch-coord-results">
+                                <h3>批量转换结果</h3>
+                                <div class="actions">
+                                    <button id="download-coord-csv" class="btn secondary-btn">下载CSV</button>
+                                </div>
+                                <div class="table-container">
+                                    <table id="coord-results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>源经度</th>
+                                                <th>源纬度</th>
+                                                <th>转换后经度</th>
+                                                <th>转换后纬度</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="coord-results-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 地图交互功能 -->
+            <div class="main-tab-pane" id="map-tab">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="heatmap">热力图生成</button>
+                    <button class="tab-btn" data-tab="pointmap">点位图生成</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- 热力图生成 -->
+                    <div class="tab-pane active" id="heatmap-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="heatmap-file-upload">上传数据文件:</label>
+                                <input type="file" id="heatmap-file-upload" accept=".xlsx,.xls,.csv" />
+                                <p class="help-text">文件需包含lat、lng、count三列，分别表示纬度、经度和权重</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="heatmap-geojson-upload">上传GeoJSON边界文件(可选):</label>
+                                <input type="file" id="heatmap-geojson-upload" accept=".json,.geojson" />
+                                <p class="help-text">用于在地图上显示区域边界</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="heatmap-center-lat">地图中心纬度:</label>
+                                <input type="text" id="heatmap-center-lat" placeholder="例如: 39.90923" value="39.90923" />
+                            </div>
+                            <div class="form-group">
+                                <label for="heatmap-center-lng">地图中心经度:</label>
+                                <input type="text" id="heatmap-center-lng" placeholder="例如: 116.65722" value="116.65722" />
+                            </div>
+                            <div class="form-group">
+                                <label for="heatmap-zoom">初始缩放级别:</label>
+                                <input type="number" id="heatmap-zoom" min="1" max="18" value="11" />
+                            </div>
+                            <div class="form-group">
+                                <label for="heatmap-tile-type">底图类型:</label>
+                                <select id="heatmap-tile-type" class="select-input">
+                                    <option value="gaode_normal">高德-常规图</option>
+                                    <option value="gaode_satellite">高德-卫星影像图</option>
+                                    <option value="gaode_street">高德-街道路网图</option>
+                                    <option value="osm">OpenStreetMap</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="heatmap-include-plugins" checked />
+                                    包含交互插件(定位、绘图、全屏等)
+                                </label>
+                            </div>
+                            <div class="button-group">
+                                <button id="preview-heatmap-btn" class="btn secondary-btn">预览热力图</button>
+                                <button id="generate-heatmap-btn" class="btn primary-btn">生成并下载</button>
+                            </div>
+                        </div>
+
+                        <div class="result-section">
+                            <div class="progress-container hidden" id="heatmap-progress-container">
+                                <div class="progress-bar" id="heatmap-progress-bar"></div>
+                                <div class="progress-text" id="heatmap-progress-text">处理中...</div>
+                            </div>
+                            
+                            <div class="map-preview-container hidden" id="heatmap-preview-container">
+                                <h3>热力图预览</h3>
+                                <div class="map-preview-actions">
+                                    <button id="download-heatmap-btn" class="btn primary-btn">下载HTML文件</button>
+                                </div>
+                                <div class="map-preview" id="heatmap-preview-frame"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 点位图生成 -->
+                    <div class="tab-pane" id="pointmap-tab">
+                        <div class="input-section">
+                            <div class="form-group">
+                                <label for="pointmap-file-upload">上传数据文件:</label>
+                                <input type="file" id="pointmap-file-upload" accept=".xlsx,.xls,.csv" />
+                                <p class="help-text">文件需包含lat、lng两列，分别表示纬度和经度</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-geojson-upload">上传GeoJSON边界文件(可选):</label>
+                                <input type="file" id="pointmap-geojson-upload" accept=".json,.geojson" />
+                                <p class="help-text">用于在地图上显示区域边界</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-center-lat">地图中心纬度:</label>
+                                <input type="text" id="pointmap-center-lat" placeholder="例如: 39.90923" value="39.90923" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-center-lng">地图中心经度:</label>
+                                <input type="text" id="pointmap-center-lng" placeholder="例如: 116.65722" value="116.65722" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-zoom">初始缩放级别:</label>
+                                <input type="number" id="pointmap-zoom" min="1" max="18" value="11" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-tile-type">底图类型:</label>
+                                <select id="pointmap-tile-type" class="select-input">
+                                    <option value="gaode_normal">高德-常规图</option>
+                                    <option value="gaode_satellite">高德-卫星影像图</option>
+                                    <option value="gaode_street">高德-街道路网图</option>
+                                    <option value="osm">OpenStreetMap</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pointmap-popup-field">弹出窗口显示字段:</label>
+                                <input type="text" id="pointmap-popup-field" placeholder="例如: address" value="address" />
+                                <p class="help-text">数据文件中用于标记点弹出窗口显示的字段名</p>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="pointmap-cluster" checked />
+                                    启用点聚合
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="pointmap-include-plugins" checked />
+                                    包含交互插件(定位、绘图、全屏等)
+                                </label>
+                            </div>
+                            <div class="button-group">
+                                <button id="preview-pointmap-btn" class="btn secondary-btn">预览点位图</button>
+                                <button id="generate-pointmap-btn" class="btn primary-btn">生成并下载</button>
+                            </div>
+                        </div>
+
+                        <div class="result-section">
+                            <div class="progress-container hidden" id="pointmap-progress-container">
+                                <div class="progress-bar" id="pointmap-progress-bar"></div>
+                                <div class="progress-text" id="pointmap-progress-text">处理中...</div>
+                            </div>
+                            
+                            <div class="map-preview-container hidden" id="pointmap-preview-container">
+                                <h3>点位图预览</h3>
+                                <div class="map-preview-actions">
+                                    <button id="download-pointmap-btn" class="btn primary-btn">下载HTML文件</button>
+                                </div>
+                                <div class="map-preview" id="pointmap-preview-frame"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 区域热力图功能 -->
+            <div class="main-tab-pane" id="region-tab">
+                <div class="input-section">
+                    <div class="form-group">
+                        <label for="region-map-type">地图类型:</label>
+                        <select id="region-map-type" class="select-input">
+                            <option value="world">世界地图</option>
+                            <option value="china">中国地图</option>
+                            <option value="province">省级地图</option>
+                            <option value="city">市级地图</option>
+                            <option value="air_quality">空气质量热力图</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group province-field hidden">
+                        <label for="region-province">省份:</label>
+                        <input type="text" id="region-province" placeholder="例如: 贵州" />
+                        <p class="help-text">请输入省份名称，如：贵州、广东、浙江等</p>
+                    </div>
+                    
+                    <div class="form-group city-field hidden">
+                        <label for="region-city">城市:</label>
+                        <input type="text" id="region-city" placeholder="例如: 贵阳" />
+                        <p class="help-text">请输入城市名称，如：贵阳、广州、杭州等</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-file-upload">上传数据文件:</label>
+                        <input type="file" id="region-file-upload" accept=".xlsx,.xls,.csv" />
+                        <p class="help-text">文件格式要求：</p>
+                        <ul class="help-text-list">
+                            <li>世界地图：需包含country和value列</li>
+                            <li>中国地图：需包含province和value列</li>
+                            <li>省级地图：需包含city和value列</li>
+                            <li>市级地图：需包含district和value列</li>
+                            <li>空气质量热力图：需包含city和value列</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-title">地图标题:</label>
+                        <input type="text" id="region-title" placeholder="例如: 世界人口分布图" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-subtitle">地图副标题:</label>
+                        <input type="text" id="region-subtitle" placeholder="例如: 2025年数据" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-width">地图宽度:</label>
+                        <input type="text" id="region-width" placeholder="例如: 900px" value="900px" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-height">地图高度:</label>
+                        <input type="text" id="region-height" placeholder="例如: 500px" value="500px" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region-background-color">背景颜色:</label>
+                        <input type="color" id="region-background-color" value="#ffffff" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="region-visualmap-piecewise" />
+                            使用分段视觉映射
+                        </label>
+                    </div>
+                    
+                    <div class="form-group continuous-visualmap">
+                        <label for="region-min-value">最小值:</label>
+                        <input type="number" id="region-min-value" placeholder="自动计算" />
+                    </div>
+                    
+                    <div class="form-group continuous-visualmap">
+                        <label for="region-max-value">最大值:</label>
+                        <input type="number" id="region-max-value" placeholder="自动计算" />
+                    </div>
+                    
+                    <div class="form-group continuous-visualmap">
+                        <label for="region-color-range">颜色范围:</label>
+                        <div class="color-range-container">
+                            <input type="color" id="region-color-start" value="#50a3ba" />
+                            <span>到</span>
+                            <input type="color" id="region-color-middle" value="#eac763" />
+                            <span>到</span>
+                            <input type="color" id="region-color-end" value="#d94e5d" />
+                        </div>
+                    </div>
+                    
+                    <div class="form-group piecewise-visualmap hidden">
+                        <label for="region-pieces">分段设置:</label>
+                        <textarea id="region-pieces" rows="5" placeholder='[{"min": 1000, "max": 10000, "color": "#FF0000"}, {"min": 500, "max": 999, "color": "#FF7F00"}]'></textarea>
+                        <p class="help-text">请按JSON格式输入分段设置</p>
+                    </div>
+                                     
+                    <div class="button-group">
+                        <button id="preview-region-map-btn" class="btn secondary-btn">预览地图</button>
+                        <button id="generate-region-map-btn" class="btn primary-btn">生成并下载</button>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <div class="progress-container hidden" id="region-progress-container">
+                        <div class="progress-bar" id="region-progress-bar"></div>
+                        <div class="progress-text" id="region-progress-text">处理中...</div>
+                    </div>
+                    
+                    <div class="map-preview-container hidden" id="region-preview-container">
+                        <h3>区域热力图预览</h3>
+                        <div class="map-preview-actions">
+                            <button id="download-region-map-btn" class="btn primary-btn">下载地图</button>
+                        </div>
+                        <div class="map-preview" id="region-preview-frame"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 Capsule地图工具 · 支持 Google Maps 与高德地图地理编码</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="config.js?v=20260803-3"></script>
+    <script src="js/app.js?v=20260803-3"></script>
+    <script src="js/coordinate_converter.js?v=20260803-3"></script>
+    <script src="js/map_generator.js?v=20260803-3"></script>
+    <script src="js/region_map_generator.js?v=20260803-3"></script>
+</body>
+</html> 
