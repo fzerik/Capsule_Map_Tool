@@ -1,6 +1,8 @@
 /**
  * 坐标转换功能的JavaScript代码
  */
+// API_BASE_URL 由 app.js 全局定义，这里直接使用
+
 document.addEventListener('DOMContentLoaded', function() {
     const mainTabBtns = document.querySelectorAll('.main-tab-btn');
     const mainTabPanes = document.querySelectorAll('.main-tab-pane');
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         convertCoordBtn.textContent = '转换中...';
 
         // 调用API进行坐标转换
-        fetch('/api/convert-coordinate', {
+        fetch(`${API_BASE_URL}/convert-coordinate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -150,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('target_system', targetSys);
 
         // 调用API进行批量坐标转换
-        fetch('/api/batch-convert-coordinate', {
+        fetch(`${API_BASE_URL}/batch-convert-coordinate`, {
             method: 'POST',
             body: formData
         })
@@ -280,4 +282,4 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.classList.remove('show');
         }, 3000);
     }
-}); 
+});

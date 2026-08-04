@@ -1,6 +1,8 @@
 /**
  * 区域热力图生成功能的JavaScript代码
  */
+// API_BASE_URL 由 app.js 全局定义，这里直接使用
+
 document.addEventListener('DOMContentLoaded', function() {
     // 区域热力图相关元素
     const regionMapType = document.getElementById('region-map-type');
@@ -157,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 调用API预览区域热力图
-        fetch('/api/preview-region-map', {
+        fetch(`${API_BASE_URL}/preview-region-map`, {
             method: 'POST',
             body: formData
         })
@@ -317,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 调用API生成区域热力图
-        fetch('/api/generate-region-map', {
+        fetch(`${API_BASE_URL}/generate-region-map`, {
             method: 'POST',
             body: formData
         })
@@ -401,4 +403,4 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.classList.remove('show');
         }, 3000);
     }
-}); 
+});

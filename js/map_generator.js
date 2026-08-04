@@ -1,6 +1,8 @@
 /**
  * 地图生成功能的JavaScript代码
  */
+// API_BASE_URL 由 app.js 全局定义，这里直接使用
+
 document.addEventListener('DOMContentLoaded', function() {
     // 地图生成标签页切换
     const mapTabBtns = document.querySelectorAll('#map-tab .tab-btn');
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 调用API预览热力图
-        fetch('/api/preview-heatmap', {
+        fetch(`${API_BASE_URL}/preview-heatmap`, {
             method: 'POST',
             body: formData
         })
@@ -196,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 调用API生成热力图
-        fetch('/api/generate-heatmap', {
+        fetch(`${API_BASE_URL}/generate-heatmap`, {
             method: 'POST',
             body: formData
         })
@@ -316,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 调用API预览点位图
-        fetch('/api/preview-pointmap', {
+        fetch(`${API_BASE_URL}/preview-pointmap`, {
             method: 'POST',
             body: formData
         })
@@ -436,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 调用API生成点位图
-        fetch('/api/generate-pointmap', {
+        fetch(`${API_BASE_URL}/generate-pointmap`, {
             method: 'POST',
             body: formData
         })
@@ -520,4 +522,4 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.classList.remove('show');
         }, 3000);
     }
-}); 
+});
