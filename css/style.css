@@ -58,9 +58,13 @@ header {
 }
 
 .title-container h1 {
-    color: var(--primary-color);
+    color: var(--dark-color);
     margin: 0;
     font-size: 24px;
+}
+
+.brand-name {
+    color: var(--primary-color);
 }
 
 .title-container p {
@@ -639,7 +643,6 @@ header {
     font-size: clamp(25px, 3vw, 34px);
     letter-spacing: -0.5px;
 }
-.title-container h1::first-letter { color: var(--primary-color); }
 .title-container p { color: var(--gray-color); font-size: 14px; }
 
 .main-tabs {
